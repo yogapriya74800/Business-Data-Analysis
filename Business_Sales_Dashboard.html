@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Sales Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --navy: #0F2044;
+    --blue: #1E4FBF;
+    --sky: #3B82F6;
+    --accent: #F59E0B;
+    --green: #10B981;
+    --red: #EF4444;
+    --bg: #F0F4FB;
+    --card: #FFFFFF;
+    --text: #1A2942;
+    --muted: #6B7A9A;
+    --border: #DDE3F0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1a3567 60%, #1E4FBF 100%);
+    padding: 28px 40px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 24px rgba(15,32,68,.35);
+  }
+  .header-left h1 {
+    font-size: 1.55rem; font-weight: 800; color: #fff; letter-spacing: -.3px;
+  }
+  .header-left p { font-size: .82rem; color: #A0B4D6; margin-top: 3px; font-weight: 400; }
+  .badge {
+    background: rgba(245,158,11,.18); border: 1px solid var(--accent);
+    color: var(--accent); border-radius: 20px; padding: 5px 14px;
+    font-size: .75rem; font-weight: 600; letter-spacing: .5px;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1400px; margin: 0 auto; padding: 28px 32px 48px; }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--card); border-radius: 14px; padding: 22px 24px;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(30,79,191,.07);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(30,79,191,.13); }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0;
+  }
+  .kpi-card.rev::before { background: var(--blue); }
+  .kpi-card.profit::before { background: var(--green); }
+  .kpi-card.orders::before { background: var(--accent); }
+  .kpi-card.avg::before { background: #8B5CF6; }
+
+  .kpi-icon { font-size: 1.5rem; margin-bottom: 10px; }
+  .kpi-label { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .kpi-value { font-size: 2rem; font-weight: 800; margin: 6px 0 4px; letter-spacing: -1px; font-family: 'JetBrains Mono', monospace; }
+  .kpi-card.rev .kpi-value { color: var(--blue); }
+  .kpi-card.profit .kpi-value { color: var(--green); }
+  .kpi-card.orders .kpi-value { color: var(--accent); }
+  .kpi-card.avg .kpi-value { color: #8B5CF6; }
+  .kpi-sub { font-size: .76rem; color: var(--muted); }
+
+  /* CHART GRID */
+  .charts-row { display: grid; gap: 20px; margin-bottom: 20px; }
+  .charts-row.two { grid-template-columns: 1fr 1fr; }
+  .charts-row.three { grid-template-columns: 2fr 1fr; }
+
+  .chart-card {
+    background: var(--card); border-radius: 14px; padding: 24px;
+    border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(30,79,191,.07);
+  }
+  .chart-title {
+    font-size: .85rem; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: .6px; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-title span { width: 4px; height: 18px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .chart-title.blue span { background: var(--blue); }
+  .chart-title.green span { background: var(--green); }
+  .chart-title.amber span { background: var(--accent); }
+  .chart-title.purple span { background: #8B5CF6; }
+  canvas { max-height: 280px; }
+
+  /* TABLE */
+  .table-section { margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+  thead th {
+    background: var(--navy); color: #fff; padding: 10px 14px;
+    text-align: left; font-weight: 600; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  tbody tr:nth-child(even) { background: #F5F8FF; }
+  tbody tr:hover { background: #EBF1FF; }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .rank-badge {
+    background: var(--blue); color: #fff; border-radius: 50%;
+    width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: .72rem; font-weight: 700;
+  }
+  .rank-badge.gold { background: var(--accent); }
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .bar-fill { height: 6px; border-radius: 3px; background: var(--blue); }
+
+  /* INSIGHTS */
+  .insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .insight-card {
+    background: var(--card); border-radius: 12px; padding: 18px 20px;
+    border: 1px solid var(--border); display: flex; gap: 14px; align-items: flex-start;
+  }
+  .insight-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .insight-title { font-weight: 700; font-size: .82rem; margin-bottom: 4px; }
+  .insight-text { font-size: .77rem; color: var(--muted); line-height: 1.5; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 16px; font-size: .72rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Business Sales Performance Dashboard</h1>
+    <p>Full Year 2023 &nbsp;·&nbsp; 1,000 transactions &nbsp;·&nbsp; 4 Regions &nbsp;·&nbsp; 4 Product Categories &nbsp;·&nbsp; 5 Sales Reps</p>
+  </div>
+  <span class="badge">TASK 1 · MAINCRAFTS TECHNOLOGY</span>
+</div>
+
+<div class="container">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card rev">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">$5.02M</div>
+      <div class="kpi-sub">Across 1,000 orders · Jan–Dec 2023</div>
+    </div>
+    <div class="kpi-card profit">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value">$2.54M</div>
+      <div class="kpi-sub">Overall profit margin: 50.7%</div>
+    </div>
+    <div class="kpi-card orders">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value">1,000</div>
+      <div class="kpi-sub">~83 orders per month avg.</div>
+    </div>
+    <div class="kpi-card avg">
+      <div class="kpi-icon">🎯</div>
+      <div class="kpi-label">Avg Order Value</div>
+      <div class="kpi-value">$5,019</div>
+      <div class="kpi-sub">Top region: North ($5,130 avg)</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Monthly Line + Region Bar -->
+  <div class="charts-row two" style="margin-bottom:20px;">
+    <div class="chart-card">
+      <div class="chart-title blue"><span></span>Monthly Sales & Profit Trend — 2023</div>
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title amber"><span></span>Revenue by Region</div>
+      <canvas id="regionBar"></canvas>
+    </div>
+  </div>
+
+  <!-- ROW 2: Category + Rep Bar -->
+  <div class="charts-row two" style="margin-bottom:20px;">
+    <div class="chart-card">
+      <div class="chart-title green"><span></span>Revenue by Product Category</div>
+      <canvas id="categoryBar"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title purple"><span></span>Sales Rep Performance</div>
+      <canvas id="repBar"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLES ROW -->
+  <div class="charts-row two" style="margin-bottom:20px;">
+    <div class="chart-card table-section">
+      <div class="chart-title blue"><span></span>Regional Breakdown</div>
+      <table>
+        <thead><tr><th>#</th><th>Region</th><th>Sales ($)</th><th>Profit ($)</th><th>Orders</th><th>Share</th></tr></thead>
+        <tbody>
+          <tr><td><span class="rank-badge gold">1</span></td><td>North</td><td>$1,369,613</td><td>$711,934</td><td>267</td><td><div class="bar-cell"><div class="bar-fill" style="width:100px;"></div>27.3%</div></td></tr>
+          <tr><td><span class="rank-badge">2</span></td><td>East</td><td>$1,259,793</td><td>$606,577</td><td>263</td><td><div class="bar-cell"><div class="bar-fill" style="width:92px;"></div>25.1%</div></td></tr>
+          <tr><td><span class="rank-badge">3</span></td><td>West</td><td>$1,235,609</td><td>$623,707</td><td>244</td><td><div class="bar-cell"><div class="bar-fill" style="width:90px;"></div>24.6%</div></td></tr>
+          <tr><td><span class="rank-badge">4</span></td><td>South</td><td>$1,154,251</td><td>$601,743</td><td>226</td><td><div class="bar-cell"><div class="bar-fill" style="width:84px;"></div>23.0%</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card table-section">
+      <div class="chart-title green"><span></span>Category Breakdown</div>
+      <table>
+        <thead><tr><th>#</th><th>Category</th><th>Sales ($)</th><th>Profit ($)</th><th>Orders</th></tr></thead>
+        <tbody>
+          <tr><td><span class="rank-badge gold">1</span></td><td>Clothing</td><td>$1,313,474</td><td>$651,357</td><td>268</td></tr>
+          <tr><td><span class="rank-badge">2</span></td><td>Furniture</td><td>$1,260,518</td><td>$617,690</td><td>260</td></tr>
+          <tr><td><span class="rank-badge">3</span></td><td>Electronics</td><td>$1,243,500</td><td>$617,348</td><td>246</td></tr>
+          <tr><td><span class="rank-badge">4</span></td><td>Food</td><td>$1,201,774</td><td>$657,566</td><td>226</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insights-grid">
+    <div class="insight-card">
+      <div class="insight-icon">🏆</div>
+      <div>
+        <div class="insight-title">North is the Top Region</div>
+        <div class="insight-text">North leads with $1.37M in revenue (27.3% share) and the highest average order value of $5,130. Recommend increasing sales investment here.</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📉</div>
+      <div>
+        <div class="insight-title">South Needs Attention</div>
+        <div class="insight-text">South is the lowest-performing region at $1.15M — 16% below North. Targeted campaigns and rep incentives could close this gap.</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">👗</div>
+      <div>
+        <div class="insight-title">Clothing Tops Revenue</div>
+        <div class="insight-text">Clothing leads all categories at $1.31M. Food has the best profitability ratio ($657K profit on $1.2M sales). Upselling Food could boost margins.</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📅</div>
+      <div>
+        <div class="insight-title">Jan & Nov Peak Months</div>
+        <div class="insight-text">January ($476K) and November ($467K) are the strongest months. July–September show a mid-year dip — plan promotions to counter this.</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">👤</div>
+      <div>
+        <div class="insight-title">David is #1 Sales Rep</div>
+        <div class="insight-text">David leads with $1.14M in sales across 222 orders. Charlie has the fewest orders (169) — consider mentorship or reallocation of territory.</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">💡</div>
+      <div>
+        <div class="insight-title">Key Recommendation</div>
+        <div class="insight-text">Double down on North + Clothing + David's strategy. Apply learnings to South region and boost Food category promotion for higher margin performance.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Business Sales Performance Analysis · Task 1 · Maincrafts Technology · Data: Jan 2023 – Dec 2023 · 1,000 Records</div>
+</div>
+
+<script>
+const colors = {
+  blue: '#1E4FBF', sky: '#3B82F6', green: '#10B981',
+  amber: '#F59E0B', purple: '#8B5CF6', red: '#EF4444',
+  teal: '#14B8A6', pink: '#EC4899'
+};
+
+const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthlySales = [476092,368919,402639,438993,389079,418458,374243,443171,367838,460379,467483,392644];
+const monthlyProfit = [210072,190938,199319,232498,196145,190327,197779,208133,214018,241429,269124,176491];
+
+// Line Chart
+new Chart(document.getElementById('lineChart'), {
+  type: 'line',
+  data: {
+    labels: monthLabels,
+    datasets: [
+      { label: 'Sales ($)', data: monthlySales, borderColor: colors.blue, backgroundColor: 'rgba(30,79,191,.08)', fill: true, tension: .4, pointBackgroundColor: colors.blue, pointRadius: 4 },
+      { label: 'Profit ($)', data: monthlyProfit, borderColor: colors.green, backgroundColor: 'rgba(16,185,129,.06)', fill: true, tension: .4, pointBackgroundColor: colors.green, pointRadius: 4 }
+    ]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { family:'Inter', size:11 } } } }, scales: { y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'K', font:{family:'Inter',size:10} }, grid:{color:'#EBF1FF'} }, x:{ticks:{font:{family:'Inter',size:10}},grid:{display:false}} } }
+});
+
+// Region Bar
+new Chart(document.getElementById('regionBar'), {
+  type: 'bar',
+  data: {
+    labels: ['North','East','West','South'],
+    datasets: [
+      { label: 'Sales', data: [1369613,1259793,1235609,1154251], backgroundColor: [colors.blue, colors.sky, colors.teal, colors.amber] },
+      { label: 'Profit', data: [711934,606577,623707,601743], backgroundColor: ['rgba(30,79,191,.4)','rgba(59,130,246,.4)','rgba(20,184,166,.4)','rgba(245,158,11,.4)'] }
+    ]
+  },
+  options: { responsive: true, plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:11}}}}, scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K',font:{family:'Inter',size:10}},grid:{color:'#EBF1FF'}},x:{ticks:{font:{family:'Inter',size:10}},grid:{display:false}}} }
+});
+
+// Category Bar
+new Chart(document.getElementById('categoryBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Clothing','Furniture','Electronics','Food'],
+    datasets: [
+      { label: 'Sales', data: [1313474,1260518,1243500,1201774], backgroundColor: [colors.purple, colors.blue, colors.amber, colors.green] },
+      { label: 'Profit', data: [651357,617690,617348,657566], backgroundColor: ['rgba(139,92,246,.4)','rgba(30,79,191,.4)','rgba(245,158,11,.4)','rgba(16,185,129,.4)'] }
+    ]
+  },
+  options: { responsive: true, plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:11}}}}, scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K',font:{family:'Inter',size:10}},grid:{color:'#EBF1FF'}},x:{ticks:{font:{family:'Inter',size:10}},grid:{display:false}}} }
+});
+
+// Rep Bar
+new Chart(document.getElementById('repBar'), {
+  type: 'bar',
+  data: {
+    labels: ['David','Bob','Eve','Alice','Charlie'],
+    datasets: [
+      { label: 'Sales', data: [1141737,1080991,970184,965542,860811], backgroundColor: [colors.blue, colors.green, colors.amber, colors.purple, colors.teal] }
+    ]
+  },
+  options: { responsive: true, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K',font:{family:'Inter',size:10}},grid:{color:'#EBF1FF'}},x:{ticks:{font:{family:'Inter',size:10}},grid:{display:false}}} }
+});
+</script>
+</body>
+</html>
